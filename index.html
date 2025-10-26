@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Climate NSW 1991-2020</title>
+  <title>Climate NSW 1991-2024</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
@@ -179,7 +179,7 @@ const tempSpec = {
     "url": "data/climate_nsw_1991_2020.csv"
   },
   "transform": [
-    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"},
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2024"},
     {"fold": ["Tmax", "Tmean", "Tmin"], "as": ["Variable", "Temperature"]}
   ],
   "mark": {
@@ -227,7 +227,7 @@ const rainSpec = {
     "url": "data/climate_nsw_1991_2020.csv"
   },
   "transform": [
-    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"}
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2024"}
   ],
   "mark": {
     "type": "bar",
@@ -269,7 +269,7 @@ const scatterSpec = {
     "url": "data/climate_nsw_1991_2020.csv"
   },
   "transform": [
-    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"}
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2024"}
   ],
   "mark": {
     "type": "circle",
@@ -316,7 +316,7 @@ const summarySpec = {
     "url": "data/climate_nsw_1991_2020.csv"
   },
   "transform": [
-    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"},
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2024"},
     {"fold": ["Tmax", "Tmean", "Tmin", "Precipitation"], "as": ["Measure", "Value"]},
     {
       "calculate": "datum.Measure === 'Precipitation' ? datum.Value / 10 : datum.Value",
