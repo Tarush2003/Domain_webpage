@@ -1,1 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Climate NSW 1991-2020</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 2rem 0;
+    }
+    header {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      color: #1a202c;
+      padding: 2rem;
+      text-align: center;
+      border-radius: 1rem;
+      max-width: 1000px;
+      margin: 0 auto 2rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    h1 {
+      margin: 0 0 0.5rem;
+      font-size: 2.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    header p {
+      margin: 0;
+      color: #718096;
+      font-size: 1.1rem;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 1rem;
+    }
+    .chart-card {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin: 1.5rem 0;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .chart-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 50px rgba(0,0,0,0.15);
+    }
+    .chart-card h2 {
+      margin: 0 0 1.5rem;
+      font-size: 1.5rem;
+      color: #2d3748;
+      font-weight: 600;
+    }
+    .chart {
+      display: flex;
+      justify-content: center;
+    }
+    footer {
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(10px);
+      padding: 1.5rem;
+      text-align: center;
+      margin: 2rem auto 0;
+      max-width: 1000px;
+      border-radius: 1rem;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    footer small {
+      color: #718096;
+      font-size: 0.95rem;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      h1 {
+        font-size: 1.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌏 Climate Trends — New South Wales</h1>
+    <p>Comprehensive climate analysis from 1991–2020</p>
+  </header>
 
+  <div class="container">
+    <div class="chart-card">
+      <h2>📍 New South Wales Location</h2>
+      <div id="map" class="chart"></div>
+    </div>
+
+    <div class="chart-card">
+      <h2>🌡️ Temperature Trends</h2>
+      <div id="temp_chart" class="chart"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="chart-card">
+        <h2>🌧️ Annual Precipitation</h2>
+        <div id="rain_chart" class="chart"></div>
+      </div>
+
+      <div class="chart-card">
+        <h2>📊 Temperature vs Rainfall</h2>
+        <div id="scatter_chart" class="chart"></div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h2>📈 Climate Summary Statistics</h2>
+      <div id="summary_chart" class="chart"></div>
+    </div>
+  </div>
+
+  <footer>
+    <small>📊 Data Source: Bureau of Meteorology (BOM) / Climate Change in Australia<br>
+    Visualization created with Vega-Lite</small>
+  </footer>
+
+<script>
+const vegaConfig = {
+  actions: false,
+  theme: 'latimes'
+};
+
+/* 1) Map spec - Fixed to use correct property name */
+const mapSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 700,
+  "height": 400,
+  "projection": {"type": "mercator"},
+  "data": {
+    "url": "https://raw.githubusercontent.com/rowanhogan/australian-states/master/states.geojson",
+    "format": {"type": "json", "property": "features"}
+  },
+  "mark": {
+    "type": "geoshape",
+    "stroke": "#ffffff",
+    "strokeWidth": 2
+  },
+  "encoding": {
+    "color": {
+      "condition": {
+        "test": "datum.properties.STATE_NAME == 'New South Wales'",
+        "value": "#667eea"
+      },
+      "value": "#e2e8f0"
+    },
+    "tooltip": {"field": "properties.STATE_NAME", "type": "nominal", "title": "State"}
+  }
+};
+
+/* 2) Temperature trends - Fixed year axis */
+const tempSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 750,
+  "height": 400,
+  "data": {
+    "url": "data/climate_nsw_1991_2020.csv"
+  },
+  "transform": [
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"},
+    {"fold": ["Tmax", "Tmean", "Tmin"], "as": ["Variable", "Temperature"]}
+  ],
+  "mark": {
+    "type": "line",
+    "point": true,
+    "strokeWidth": 3
+  },
+  "encoding": {
+    "x": {
+      "field": "Year",
+      "type": "quantitative",
+      "title": "Year",
+      "scale": {"domain": [1991, 2020]},
+      "axis": {"format": "d", "tickCount": 10}
+    },
+    "y": {
+      "field": "Temperature",
+      "type": "quantitative",
+      "title": "Temperature (°C)",
+      "scale": {"zero": false}
+    },
+    "color": {
+      "field": "Variable",
+      "type": "nominal",
+      "scale": {
+        "domain": ["Tmax", "Tmean", "Tmin"],
+        "range": ["#e15759", "#f28e2b", "#4e79a7"]
+      },
+      "legend": {"title": "Temperature Type"}
+    },
+    "tooltip": [
+      {"field": "Year", "type": "quantitative", "format": "d"},
+      {"field": "Variable", "type": "nominal", "title": "Type"},
+      {"field": "Temperature", "type": "quantitative", "format": ".2f", "title": "Temperature (°C)"}
+    ]
+  }
+};
+
+/* 3) Rainfall bar chart */
+const rainSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 380,
+  "height": 300,
+  "data": {
+    "url": "data/climate_nsw_1991_2020.csv"
+  },
+  "transform": [
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"}
+  ],
+  "mark": {
+    "type": "bar",
+    "color": "#48bb78",
+    "cornerRadiusTopLeft": 4,
+    "cornerRadiusTopRight": 4
+  },
+  "encoding": {
+    "x": {
+      "field": "Year",
+      "type": "quantitative",
+      "title": "Year",
+      "axis": {"format": "d", "labelAngle": -45}
+    },
+    "y": {
+      "field": "Precipitation",
+      "type": "quantitative",
+      "title": "Precipitation (mm)"
+    },
+    "color": {
+      "field": "Precipitation",
+      "type": "quantitative",
+      "scale": {"scheme": "blues"},
+      "legend": null
+    },
+    "tooltip": [
+      {"field": "Year", "type": "quantitative", "format": "d"},
+      {"field": "Precipitation", "type": "quantitative", "format": ".2f", "title": "Precipitation (mm)"}
+    ]
+  }
+};
+
+/* 4) Scatter plot */
+const scatterSpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 380,
+  "height": 300,
+  "data": {
+    "url": "data/climate_nsw_1991_2020.csv"
+  },
+  "transform": [
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"}
+  ],
+  "mark": {
+    "type": "circle",
+    "opacity": 0.7
+  },
+  "encoding": {
+    "x": {
+      "field": "Tmean",
+      "type": "quantitative",
+      "title": "Mean Temperature (°C)",
+      "scale": {"zero": false}
+    },
+    "y": {
+      "field": "Precipitation",
+      "type": "quantitative",
+      "title": "Precipitation (mm)"
+    },
+    "size": {
+      "field": "Precipitation",
+      "type": "quantitative",
+      "scale": {"range": [50, 500]},
+      "legend": null
+    },
+    "color": {
+      "field": "Year",
+      "type": "quantitative",
+      "scale": {"scheme": "viridis"},
+      "legend": {"title": "Year"}
+    },
+    "tooltip": [
+      {"field": "Year", "type": "quantitative", "format": "d"},
+      {"field": "Tmean", "type": "quantitative", "format": ".2f", "title": "Mean Temp (°C)"},
+      {"field": "Precipitation", "type": "quantitative", "format": ".2f", "title": "Precipitation (mm)"}
+    ]
+  }
+};
+
+/* 5) Summary box plot */
+const summarySpec = {
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "width": 850,
+  "height": 300,
+  "data": {
+    "url": "data/climate_nsw_1991_2020.csv"
+  },
+  "transform": [
+    {"filter": "datum.Year >= 1991 && datum.Year <= 2020"},
+    {"fold": ["Tmax", "Tmean", "Tmin", "Precipitation"], "as": ["Measure", "Value"]},
+    {
+      "calculate": "datum.Measure === 'Precipitation' ? datum.Value / 10 : datum.Value",
+      "as": "Normalized_Value"
+    }
+  ],
+  "mark": {
+    "type": "boxplot",
+    "extent": "min-max"
+  },
+  "encoding": {
+    "x": {
+      "field": "Measure",
+      "type": "nominal",
+      "title": "Climate Measure"
+    },
+    "y": {
+      "field": "Normalized_Value",
+      "type": "quantitative",
+      "title": "Value (Temperature: °C, Precipitation: mm/10)"
+    },
+    "color": {
+      "field": "Measure",
+      "type": "nominal",
+      "scale": {
+        "domain": ["Tmax", "Tmean", "Tmin", "Precipitation"],
+        "range": ["#e15759", "#f28e2b", "#4e79a7", "#48bb78"]
+      },
+      "legend": null
+    },
+    "tooltip": [
+      {"field": "Measure", "type": "nominal"},
+      {"field": "Normalized_Value", "type": "quantitative", "format": ".2f", "title": "Value"}
+    ]
+  }
+};
+
+/* Embed all charts */
+vegaEmbed('#map', mapSpec, vegaConfig);
+vegaEmbed('#temp_chart', tempSpec, vegaConfig);
+vegaEmbed('#rain_chart', rainSpec, vegaConfig);
+vegaEmbed('#scatter_chart', scatterSpec, vegaConfig);
+vegaEmbed('#summary_chart', summarySpec, vegaConfig);
+
+</script>
+</body>
+</html>
